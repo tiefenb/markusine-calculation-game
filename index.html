@@ -85,7 +85,7 @@
 
         #flyingImage {
             position: fixed;
-            width: 200px; /* Bildgröße erhöht */
+            width: 200px;
             display: none;
             top: 50%;
             left: 0;
@@ -132,6 +132,7 @@
 
         let score = 0;
         let correctAnswer = 0;
+        let currentAudios = []; // Array zum Verwalten der aktuellen Audio-Objekte
 
         function startGame() {
             playIntro();
@@ -187,56 +188,62 @@
         function selectAnswer(element) {
             let selectedAnswer = parseInt(element.dataset.value);
 
-            if (selectedAnswer === correctAnswer) {
-                // Richtige Antwort
-                score++;
-                document.getElementById('score').textContent = `Punkte: ${score}`;
-                // Spiele Audio für richtige Antwort
-                playFeedbackAudio(true);
-                // Füge 'correct'-Klasse hinzu
-                element.classList.add('correct');
+            // Spiele die Audio-Datei der ausgewählten Zahl ab
+            playSelectedNumberAudio(selectedAnswer, function() {
+                if (selectedAnswer === correctAnswer) {
+                    // Richtige Antwort
+                    score++;
+                    document.getElementById('score').textContent = `Punkte: ${score}`;
+                    // Spiele Audio für richtige Antwort
+                    playFeedbackAudio(true);
+                    // Füge 'correct'-Klasse hinzu
+                    element.classList.add('correct');
 
-                // Deaktiviere alle Optionen außer der richtigen
-                let optionElements = document.getElementsByClassName('option');
-                for (let i = 0; i < optionElements.length; i++) {
-                    optionElements[i].style.pointerEvents = 'none';
-                    if (optionElements[i] !== element) {
-                        optionElements[i].classList.add('disabled');
+                    // Deaktiviere alle Optionen außer der richtigen
+                    let optionElements = document.getElementsByClassName('option');
+                    for (let i = 0; i < optionElements.length; i++) {
+                        optionElements[i].style.pointerEvents = 'none';
+                        if (optionElements[i] !== element) {
+                            optionElements[i].classList.add('disabled');
+                        }
                     }
+
+                    // Animation bei richtiger Antwort
+                    correctAnswerAnimation();
+
+                    // Nach kurzer Verzögerung zur nächsten Frage
+                    setTimeout(function() {
+                        generateQuestion();
+                    }, 5500); // 5.5 Sekunden Verzögerung
+
+                } else {
+                    // Falsche Antwort
+                    // Spiele Audio für falsche Antwort
+                    playFeedbackAudio(false);
+                    // Füge 'incorrect'-Klasse hinzu
+                    element.classList.add('incorrect');
+                    element.style.pointerEvents = 'none'; // Deaktiviere nur diese Option
+                    element.classList.add('disabled'); // Visuell als deaktiviert markieren
+
+                    // Füge Animation zum Ausfaden hinzu
+                    element.style.animation = 'fadeBackToGrey 2s forwards';
+
+                    // Animation bei falscher Antwort
+                    incorrectAnswerAnimation();
                 }
-
-                // Animation bei richtiger Antwort
-                correctAnswerAnimation();
-
-                // Nach kurzer Verzögerung zur nächsten Frage
-                setTimeout(function() {
-                    generateQuestion();
-                }, 5500); // 5.5 Sekunden Verzögerung
-
-            } else {
-                // Falsche Antwort
-                // Spiele Audio für falsche Antwort
-                playFeedbackAudio(false);
-                // Füge 'incorrect'-Klasse hinzu
-                element.classList.add('incorrect');
-                element.style.pointerEvents = 'none'; // Deaktiviere nur diese Option
-                element.classList.add('disabled'); // Visuell als deaktiviert markieren
-
-                // Füge Animation zum Ausfaden hinzu
-                element.style.animation = 'fadeBackToGrey 2s forwards';
-
-                // Animation bei falscher Antwort
-                incorrectAnswerAnimation();
-            }
+            });
         }
 
         function playIntro() {
+            stopAllAudio(); // Stoppe alle laufenden Audio-Dateien
             let audio = new Audio('sounds/intro.mp3');
+            currentAudios.push(audio);
             audio.play();
         }
 
         function playQuestionAudio(num1, num2) {
-            // Spiele die Audiosequenz ab: "Rechne", num1, "mal", num2
+            stopAllAudio(); // Stoppe alle laufenden Audio-Dateien
+
             let audioSequence = [
                 'sounds/rechne.mp3',
                 'sounds/' + num1 + '.mp3',
@@ -248,20 +255,72 @@
         }
 
         function playFeedbackAudio(isCorrect) {
-            // Spiele je nach Richtigkeit der Antwort ein Feedback-Audio ab
             let audioFile = isCorrect ? 'sounds/richtig.mp3' : 'sounds/falsch.mp3';
             let audio = new Audio(audioFile);
+            currentAudios.push(audio);
             audio.play();
         }
 
-        function playAudioSequence(files) {
-            // Funktion zum Abspielen einer Sequenz von Audio-Dateien
-            if (files.length === 0) return;
-            let audio = new Audio(files[0]);
+        function playSelectedNumberAudio(number, callback) {
+            /*
+            // TODO no files yet here
+            let audioFile = 'sounds/' + number + '.mp3';
+            let audio = new Audio(audioFile);
+            currentAudios.push(audio);
             audio.play();
             audio.onended = function() {
-                playAudioSequence(files.slice(1));
+                callback(); // Nach dem Abspielen die Rückmeldung abspielen
             };
+            */
+           callback();
+        }
+
+        function playAudioSequence(files) {
+            stopAllAudio(); // Stoppe alle laufenden Audio-Dateien
+
+            if (files.length === 0) return;
+
+            let index = 0;
+
+            function playNext() {
+                if (index >= files.length) {
+                    return;
+                }
+
+                let audio = new Audio(files[index]);
+                currentAudios.push(audio);
+
+                // Optional: Wiedergabegeschwindigkeit anpassen
+                if (shouldSpeedUp(files[index])) {
+                    audio.playbackRate = 2.33; // Geschwindigkeit anpassen
+                }
+
+                audio.play();
+                audio.onended = function() {
+                    index++;
+                    playNext();
+                };
+            }
+
+            playNext();
+        }
+
+        function shouldSpeedUp(fileName) {
+            // Prüfen, ob der Dateiname 'rechne.mp3', 'mal.mp3' oder eine Zahl ist
+            fileName = fileName.replace('sounds/', '');
+            return (
+                fileName === 'rechne.mp3' ||
+                fileName === 'mal.mp3' ||
+                /^[0-9]+\.mp3$/.test(fileName)
+            );
+        }
+
+        function stopAllAudio() {
+            currentAudios.forEach(function(audio) {
+                audio.pause();
+                audio.currentTime = 0;
+            });
+            currentAudios = [];
         }
 
         // Animation bei richtiger Antwort
