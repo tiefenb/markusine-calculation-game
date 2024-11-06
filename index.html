@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Multiplikationsspiel</title>
+    <style>
+        /* CSS-Stile */
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        #question {
+            font-size: 24px;
+            margin: 20px;
+        }
+
+        .option {
+            display: inline-block;
+            width: 45%;
+            margin: 10px 2%;
+            padding: 20px;
+            font-size: 24px;
+            background-color: #f0f0f0;
+            color: #000;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.5s ease, opacity 0.5s ease, color 0.5s ease;
+        }
+
+        .option:hover {
+            background-color: #e0e0e0;
+        }
+
+        .option.correct {
+            background-color: green !important;
+            color: #fff;
+            opacity: 1;
+        }
+
+        .option.incorrect {
+            background-color: red !important;
+            color: #fff;
+        }
+
+        .option.disabled {
+            background-color: #d3d3d3;
+            color: #888;
+            cursor: default;
+            opacity: 0.6;
+        }
+
+        /* Keyframes für das Ausfaden von rot zu grau */
+        @keyframes fadeBackToGrey {
+            from {
+                background-color: red;
+                color: #fff;
+            }
+            to {
+                background-color: #d3d3d3;
+                color: #888;
+            }
+        }
+
+        /* Keyframes für das Fliegen des Bildes mit Auf- und Abbewegung */
+        @keyframes flyAcross {
+            0% {
+                transform: translate(-100px, -50%) rotate(0deg);
+            }
+            25% {
+                transform: translate(25vw, -60%) rotate(90deg);
+            }
+            50% {
+                transform: translate(50vw, -40%) rotate(180deg);
+            }
+            75% {
+                transform: translate(75vw, -60%) rotate(270deg);
+            }
+            100% {
+                transform: translate(calc(100vw + 100px), -50%) rotate(360deg);
+            }
+        }
+
+        #flyingImage {
+            position: fixed;
+            width: 200px; /* Bildgröße erhöht */
+            display: none;
+            top: 50%;
+            left: 0;
+            transform: translate(-100px, -50%);
+            z-index: 9999;
+        }
+
+        #score {
+            font-size: 20px;
+            margin-top: 20px;
+        }
+
+        #startButton {
+            font-size: 24px;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="gameContainer" style="display:none;">
+        <div id="question">Frage wird geladen...</div>
+
+        <div id="options">
+            <div class="option" onclick="selectAnswer(this)"></div>
+            <div class="option" onclick="selectAnswer(this)"></div>
+            <div class="option" onclick="selectAnswer(this)"></div>
+            <div class="option" onclick="selectAnswer(this)"></div>
+        </div>
+
+        <div id="score">Punkte: 0</div>
+
+        <!-- Animationselement -->
+        <img id="flyingImage" src="markusine.png" alt="Animation">
+
+    </div>
+
+    <button id="startButton" onclick="startGame()">Start</button>
+
+    <script>
+        // JavaScript-Code
+
+        let score = 0;
+        let correctAnswer = 0;
+
+        function startGame() {
+            playIntro();
+            document.getElementById('startButton').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'block';
+            window.setTimeout(function() {
+                generateQuestion();
+            }, 9000);
+        }
+
+        function generateQuestion() {
+            // Entferne Klassen und aktiviere die Optionen
+            let optionElements = document.getElementsByClassName('option');
+            for (let i = 0; i < optionElements.length; i++) {
+                optionElements[i].classList.remove('correct', 'incorrect', 'disabled');
+                optionElements[i].style.pointerEvents = 'auto';
+                optionElements[i].style.animation = '';
+                optionElements[i].style.backgroundColor = '#f0f0f0';
+                optionElements[i].style.color = '#000';
+                optionElements[i].style.opacity = '1';
+            }
+
+            // Generiere zufällige Zahlen zwischen 0 und 10
+            let num1 = Math.floor(Math.random() * 11);
+            let num2 = Math.floor(Math.random() * 11);
+            correctAnswer = num1 * num2;
+
+            // Aktualisiere den Fragetext
+            document.getElementById('question').textContent = `Rechne ${num1} mal ${num2}`;
+
+            // Spiele die Audio-Frage ab
+            playQuestionAudio(num1, num2);
+
+            // Generiere Antwortoptionen
+            let options = [correctAnswer];
+            while (options.length < 4) {
+                let wrongAnswer = Math.floor(Math.random() * 101); // 0 bis 100
+                if (!options.includes(wrongAnswer)) {
+                    options.push(wrongAnswer);
+                }
+            }
+
+            // Mische die Optionen
+            options.sort(() => Math.random() - 0.5);
+
+            // Aktualisiere die Antwortbuttons
+            for (let i = 0; i < optionElements.length; i++) {
+                optionElements[i].textContent = options[i];
+                optionElements[i].dataset.value = options[i];
+            }
+        }
+
+        function selectAnswer(element) {
+            let selectedAnswer = parseInt(element.dataset.value);
+
+            if (selectedAnswer === correctAnswer) {
+                // Richtige Antwort
+                score++;
+                document.getElementById('score').textContent = `Punkte: ${score}`;
+                // Spiele Audio für richtige Antwort
+                playFeedbackAudio(true);
+                // Füge 'correct'-Klasse hinzu
+                element.classList.add('correct');
+
+                // Deaktiviere alle Optionen außer der richtigen
+                let optionElements = document.getElementsByClassName('option');
+                for (let i = 0; i < optionElements.length; i++) {
+                    optionElements[i].style.pointerEvents = 'none';
+                    if (optionElements[i] !== element) {
+                        optionElements[i].classList.add('disabled');
+                    }
+                }
+
+                // Animation bei richtiger Antwort
+                correctAnswerAnimation();
+
+                // Nach kurzer Verzögerung zur nächsten Frage
+                setTimeout(function() {
+                    generateQuestion();
+                }, 5500); // 5.5 Sekunden Verzögerung
+
+            } else {
+                // Falsche Antwort
+                // Spiele Audio für falsche Antwort
+                playFeedbackAudio(false);
+                // Füge 'incorrect'-Klasse hinzu
+                element.classList.add('incorrect');
+                element.style.pointerEvents = 'none'; // Deaktiviere nur diese Option
+                element.classList.add('disabled'); // Visuell als deaktiviert markieren
+
+                // Füge Animation zum Ausfaden hinzu
+                element.style.animation = 'fadeBackToGrey 2s forwards';
+
+                // Animation bei falscher Antwort
+                incorrectAnswerAnimation();
+            }
+        }
+
+        function playIntro() {
+            let audio = new Audio('sounds/intro.mp3');
+            audio.play();
+        }
+
+        function playQuestionAudio(num1, num2) {
+            // Spiele die Audiosequenz ab: "Rechne", num1, "mal", num2
+            let audioSequence = [
+                'sounds/rechne.mp3',
+                'sounds/' + num1 + '.mp3',
+                'sounds/mal.mp3',
+                'sounds/' + num2 + '.mp3'
+            ];
+
+            playAudioSequence(audioSequence);
+        }
+
+        function playFeedbackAudio(isCorrect) {
+            // Spiele je nach Richtigkeit der Antwort ein Feedback-Audio ab
+            let audioFile = isCorrect ? 'sounds/richtig.mp3' : 'sounds/falsch.mp3';
+            let audio = new Audio(audioFile);
+            audio.play();
+        }
+
+        function playAudioSequence(files) {
+            // Funktion zum Abspielen einer Sequenz von Audio-Dateien
+            if (files.length === 0) return;
+            let audio = new Audio(files[0]);
+            audio.play();
+            audio.onended = function() {
+                playAudioSequence(files.slice(1));
+            };
+        }
+
+        // Animation bei richtiger Antwort
+        function correctAnswerAnimation() {
+            let img = document.getElementById('flyingImage');
+            img.style.display = 'block';
+            img.style.animationName = 'flyAcross';
+            img.style.animationDuration = '5s'; // Dauer auf 5 Sekunden erhöht
+            img.style.animationTimingFunction = 'linear';
+            img.style.animationFillMode = 'forwards';
+
+            // Nach 5 Sekunden das Bild wieder ausblenden
+            setTimeout(function() {
+                img.style.display = 'none';
+                img.style.animationName = '';
+            }, 5000);
+        }
+
+        // Platzhalterfunktion für Animation bei falscher Antwort
+        function incorrectAnswerAnimation() {
+            // Hier kannst du deine Animation für falsche Antworten einfügen
+            console.log('Animation für falsche Antwort');
+        }
+
+    </script>
+
+</body>
+</html>
