@@ -67,19 +67,19 @@
         /* Keyframes für das Fliegen des Bildes mit Auf- und Abbewegung */
         @keyframes flyAcross {
             0% {
-                transform: translate(-100px, -50%) rotate(0deg);
+                transform: translate(-100px, -10%) rotate(0deg) scale(0.1);
             }
             25% {
-                transform: translate(25vw, -60%) rotate(90deg);
+                transform: translate(25vw, -60%) rotate(90deg) scale(1);
             }
             50% {
-                transform: translate(50vw, -40%) rotate(180deg);
+                transform: translate(50vw, -40%) rotate(180deg) scale(2);
             }
             75% {
-                transform: translate(75vw, -60%) rotate(270deg);
+                transform: translate(75vw, -60%) rotate(270deg) scale(0.5);
             }
             100% {
-                transform: translate(calc(100vw + 100px), -50%) rotate(360deg);
+                transform: translate(calc(100vw + 100px), -50%) rotate(360deg) scale(0.1);
             }
         }
 
@@ -133,6 +133,7 @@
         let score = 0;
         let correctAnswer = 0;
         let currentAudios = []; // Array zum Verwalten der aktuellen Audio-Objekte
+        let animationSpeedMultiplier = 1; // Multiplikator für die Animationsgeschwindigkeit
 
         function startGame() {
             playIntro();
@@ -154,6 +155,9 @@
                 optionElements[i].style.color = '#000';
                 optionElements[i].style.opacity = '1';
             }
+
+            // Zurücksetzen des Animations-Multiplikators
+            animationSpeedMultiplier = 1;
 
             // Generiere zufällige Zahlen zwischen 0 und 10
             let num1 = Math.floor(Math.random() * 11);
@@ -188,6 +192,12 @@
         function selectAnswer(element) {
             let selectedAnswer = parseInt(element.dataset.value);
 
+            // Deaktivieren aller Optionen, um Mehrfachklicks zu vermeiden
+            let optionElements = document.getElementsByClassName('option');
+            for (let i = 0; i < optionElements.length; i++) {
+                optionElements[i].style.pointerEvents = 'none';
+            }
+
             // Spiele die Audio-Datei der ausgewählten Zahl ab
             playSelectedNumberAudio(selectedAnswer, function() {
                 if (selectedAnswer === correctAnswer) {
@@ -200,9 +210,7 @@
                     element.classList.add('correct');
 
                     // Deaktiviere alle Optionen außer der richtigen
-                    let optionElements = document.getElementsByClassName('option');
                     for (let i = 0; i < optionElements.length; i++) {
-                        optionElements[i].style.pointerEvents = 'none';
                         if (optionElements[i] !== element) {
                             optionElements[i].classList.add('disabled');
                         }
@@ -214,7 +222,7 @@
                     // Nach kurzer Verzögerung zur nächsten Frage
                     setTimeout(function() {
                         generateQuestion();
-                    }, 5500); // 5.5 Sekunden Verzögerung
+                    }, 5500 / animationSpeedMultiplier); // Anpassung der Verzögerung
 
                 } else {
                     // Falsche Antwort
@@ -222,11 +230,17 @@
                     playFeedbackAudio(false);
                     // Füge 'incorrect'-Klasse hinzu
                     element.classList.add('incorrect');
-                    element.style.pointerEvents = 'none'; // Deaktiviere nur diese Option
                     element.classList.add('disabled'); // Visuell als deaktiviert markieren
 
                     // Füge Animation zum Ausfaden hinzu
                     element.style.animation = 'fadeBackToGrey 2s forwards';
+
+                    // Reaktivieren der restlichen Optionen
+                    for (let i = 0; i < optionElements.length; i++) {
+                        if (optionElements[i] !== element && !optionElements[i].classList.contains('disabled')) {
+                            optionElements[i].style.pointerEvents = 'auto';
+                        }
+                    }
 
                     // Animation bei falscher Antwort
                     incorrectAnswerAnimation();
@@ -255,6 +269,7 @@
         }
 
         function playFeedbackAudio(isCorrect) {
+            stopAllAudio();
             let audioFile = isCorrect ? 'sounds/richtig.mp3' : 'sounds/falsch.mp3';
             let audio = new Audio(audioFile);
             currentAudios.push(audio);
@@ -262,8 +277,9 @@
         }
 
         function playSelectedNumberAudio(number, callback) {
+            // Wenn keine Audios für Zahlen vorhanden sind, direkt das Callback aufrufen
+            // Ansonsten können Sie hier die Audio-Dateien für die Zahlen einbinden
             /*
-            // TODO no files yet here
             let audioFile = 'sounds/' + number + '.mp3';
             let audio = new Audio(audioFile);
             currentAudios.push(audio);
@@ -272,7 +288,7 @@
                 callback(); // Nach dem Abspielen die Rückmeldung abspielen
             };
             */
-           callback();
+            callback();
         }
 
         function playAudioSequence(files) {
@@ -328,20 +344,20 @@
             let img = document.getElementById('flyingImage');
             img.style.display = 'block';
             img.style.animationName = 'flyAcross';
-            img.style.animationDuration = '5s'; // Dauer auf 5 Sekunden erhöht
+            img.style.animationDuration = '2s'; // Dauer angepasst
             img.style.animationTimingFunction = 'linear';
             img.style.animationFillMode = 'forwards';
 
-            // Nach 5 Sekunden das Bild wieder ausblenden
+            // Nach Ablauf der Animation das Bild wieder ausblenden
             setTimeout(function() {
                 img.style.display = 'none';
                 img.style.animationName = '';
-            }, 5000);
+            }, 3000);
         }
 
         // Platzhalterfunktion für Animation bei falscher Antwort
         function incorrectAnswerAnimation() {
-            // Hier kannst du deine Animation für falsche Antworten einfügen
+            // Hier können Sie eine Animation für falsche Antworten einfügen
             console.log('Animation für falsche Antwort');
         }
 
